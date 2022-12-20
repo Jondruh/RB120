@@ -1,4 +1,3 @@
-require 'pry'
 class Player
   attr_accessor :hand, :score, :round_score
   attr_reader :name
