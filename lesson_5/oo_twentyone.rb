@@ -125,6 +125,8 @@ class TwentyOne
     show_game_result
   end
 
+  private
+
   def setup_game
     clear_screen
     display_welcome_message
