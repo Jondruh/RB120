@@ -10,17 +10,10 @@ class Player
   end
 
   def display_hand(face_up: true)
-    display = []
-
-    if face_up
-      hand.each { |card| display << card.show }
-    else
-      hand.each { |card| display << card.hide }
-    end
+    display = face_up ? hand.map(&:show) : hand.map(&:hide)
 
     # zips each line of the cards so the cards can be displayed in a row.
-    joined = display.pop.zip(*display)
-
+    joined = display.shift.zip(*display)
     joined.each { |line| puts line.join(" ") }
   end
 
@@ -117,17 +110,18 @@ class TwentyOne
            { diamonds: "\u2666" },
            { clubs: "\u2663" }]
 
-  attr_reader :human, :dealer, :deck
+  attr_reader :human, :dealer, :deck, :round_winner, :busted_player
 
-  def start
+  def start # Main game
     setup_game
-    loop do
+    loop do # Round loop
       setup_round
       human_turn
       dealer_turn if !human.busted?
-      show_round_result
-      break if dealer.round_score == 5 || human.round_score == 5
-      ready_next
+      display_round_results
+
+      break if game_over?
+      player_ready_prompt
     end
     show_game_result
   end
@@ -141,19 +135,47 @@ class TwentyOne
 
   def setup_round
     empty_hands
+    clear_round_winner
+    clear_busted_player
     create_deck
     deal_cards
     display_table
   end
 
-  def ready_next
+  def human_turn
+    loop do
+      input = hit_or_stay
+
+      case input
+      when 'h' then
+        deal_to(human)
+        display_table
+        break if human.busted?
+      when 's' then break
+      end
+    end
+  end
+
+  def dealer_turn
+    until dealer.busted? || dealer.score >= DEALER_CUTOFF
+      deal_to(dealer)
+    end
+  end
+
+  def display_round_results
+    update_round_winner
+    update_round_scores
+    display_table(show_all_cards: true)
+    display_round_winner
+  end
+
+  def player_ready_prompt
     puts "Press enter to go to next round"
     gets.chomp
   end
 
-  def empty_hands
-    human.hand = []
-    dealer.hand = []
+  def game_over?
+    dealer.round_score == 5 || human.round_score == 5
   end
 
   def show_game_result
@@ -164,41 +186,66 @@ class TwentyOne
     puts "~" * 80
   end
 
-  def show_round_result
-    display_table(show_all_cards: true)
+  def empty_hands
+    human.hand = []
+    dealer.hand = []
   end
 
-  def result
-    winner = nil
-    if human.busted?
-      winner = dealer
-      "You went bust! The dealer wins!"
-    elsif dealer.busted?
-      human.round_score += 1
-      "The dealer went bust! #{human.name} wins!"
-    elsif human.score > dealer.score
-      human.round_score += 1
-      "#{human.name} wins!"
-    elsif human.score < dealer.score
-      dealer.round_score += 1
-      "The dealer wins!"
-    else
-      "It's a tie!"
+  def busted_player_message
+    busted_player ? "#{busted_player.name} went bust! " : ""
+  end
+
+  def display_round_winner
+    if round_winner
+      puts busted_player_message + "#{round_winner.name} has won the round!"
+    elsif round_winner.nil?
+      puts "It's a tie!"
     end
+  end
+
+  def update_round_scores
+    @round_winner.round_score += 1 if round_winner
+  end
+
+  def update_round_winner
+    if human.busted?
+      @round_winner = dealer
+      @busted_player = human
+    elsif dealer.busted?
+      @round_winner = human
+      @busted_player = dealer
+    elsif human.score != dealer.score
+      @round_winner = [human, dealer].max_by(&:score)
+    end
+  end
+
+  def clear_busted_player
+    @busted_player = nil
+  end
+
+  def clear_round_winner
+    @round_winner = nil
   end
 
   def create_deck
     @deck = Deck.new
   end
 
-  def clear_screen
-    system "clear"
+  def create_players
+    name = nil
+    loop do
+      puts "Please enter a name"
+      name = gets.chomp
+      break if !name.empty?
+      puts "Please enter at least one character"
+    end
+
+    @human = Player.new(name)
+    @dealer = Player.new("Dealer")
   end
 
-  def dealer_turn
-    until dealer.busted? || dealer.score >= DEALER_CUTOFF
-      deal_to(dealer)
-    end
+  def clear_screen
+    system "clear"
   end
 
   def deal_to(player)
@@ -215,20 +262,6 @@ class TwentyOne
       puts "Sorry, please enter 'h' or 's'"
     end
     input
-  end
-
-  def human_turn
-    loop do
-      input = hit_or_stay
-
-      case input
-      when 'h' then
-        deal_to(human)
-        display_table
-        break if human.busted?
-      when 's' then break
-      end
-    end
   end
 
   def show_dealer_title(show_score: false)
@@ -278,19 +311,6 @@ class TwentyOne
 
   def line_spacer
     "-" * 80
-  end
-
-  def create_players
-    name = nil
-    loop do
-      puts "Please enter a name"
-      name = gets.chomp
-      break if !name.empty?
-      puts "Please enter at least one character"
-    end
-
-    @human = Player.new(name)
-    @dealer = Player.new("Dealer")
   end
 end
 
