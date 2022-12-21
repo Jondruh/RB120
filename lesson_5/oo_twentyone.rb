@@ -1,4 +1,3 @@
-require 'pry'
 class Player
   attr_accessor :hand, :score, :round_score
   attr_reader :name
@@ -33,6 +32,42 @@ class Player
     end
 
     self.score = hand_sum
+  end
+end
+
+class Dealer < Player
+  DEALER_CUTOFF = 17
+
+  def initialize
+    super("Dealer")
+  end
+
+  def show_title(show_score: false)
+    score_display = show_score ? score : "???"
+    puts "Dealer's hand // Dealer's hand score: #{score_display}"
+  end
+end
+
+class Human < Player
+  def initialize
+    super(choose_name)
+  end
+
+  def show_title
+    puts "Your hand. // Your hand score: #{score}"
+  end
+
+  private
+
+  def choose_name
+    name = nil
+    puts "Please enter a name:"
+    loop do
+      name = gets.chomp
+      break if name.match?(/\S/)
+      puts "Please enter at least one non-whitespace character"
+    end
+    name
   end
 end
 
@@ -109,7 +144,6 @@ end
 
 class TwentyOne
   BUST = 21
-  DEALER_CUTOFF = 17
 
   attr_reader :human, :dealer, :deck, :round_winner, :busted_player
 
@@ -160,7 +194,7 @@ class TwentyOne
   end
 
   def dealer_turn
-    until dealer.busted? || dealer.score >= DEALER_CUTOFF
+    until dealer.busted? || dealer.score >= Dealer::DEALER_CUTOFF
       deal_to(dealer)
     end
   end
@@ -235,16 +269,8 @@ class TwentyOne
   end
 
   def create_players
-    name = nil
-    puts "Please enter a name:"
-    loop do
-      name = gets.chomp
-      break if name.match?(/\S/)
-      puts "Please enter at least one non-whitespace character"
-    end
-
-    @human = Player.new(name)
-    @dealer = Player.new("Dealer")
+    @human = Human.new
+    @dealer = Dealer.new
   end
 
   def clear_screen
@@ -267,18 +293,13 @@ class TwentyOne
     input
   end
 
-  def show_dealer_title(show_score: false)
-    score_display = show_score ? dealer.score : "???"
-    puts "Dealer's hand // Dealer's hand score: #{score_display}"
-  end
-
   def display_table(show_all_cards: false)
     clear_screen
     show_round_scores
-    show_dealer_title(show_score: show_all_cards)
+    dealer.show_title(show_score: show_all_cards)
     dealer.display_hand(face_up: show_all_cards)
 
-    puts "Your hand. // Your hand score #{human.score}"
+    human.show_title
     human.display_hand
   end
 
