@@ -35,8 +35,49 @@ class Player
   end
 end
 
+class Dealer < Player
+  DEALER_CUTOFF = 17
+
+  def initialize
+    super("Dealer")
+  end
+
+  def show_title(show_score: false)
+    score_display = show_score ? score : "???"
+    puts "Dealer's hand // Dealer's hand score: #{score_display}"
+  end
+end
+
+class Human < Player
+  def initialize
+    super(choose_name)
+  end
+
+  def show_title
+    puts "Your hand. // Your hand score: #{score}"
+  end
+
+  private
+
+  def choose_name
+    name = nil
+    puts "Please enter a name:"
+    loop do
+      name = gets.chomp
+      break if name.match?(/\S/)
+      puts "Please enter at least one non-whitespace character"
+    end
+    name
+  end
+end
+
 class Deck
   attr_accessor :cards
+
+  SUITS = [{ spades: "\u2660" },
+           { hearts: "\u2665" },
+           { diamonds: "\u2666" },
+           { clubs: "\u2663" }]
 
   def initialize
     @cards = []
@@ -50,7 +91,7 @@ class Deck
   private
 
   def build_deck
-    TwentyOne::SUITS.each do |suit|
+    SUITS.each do |suit|
       (2..10).each { |num| cards << Card.new(suit.values[0], num.to_s) }
       %w(J Q K A).each { |face| cards << Card.new(suit.values[0], face) }
     end
@@ -103,11 +144,6 @@ end
 
 class TwentyOne
   BUST = 21
-  DEALER_CUTOFF = 17
-  SUITS = [{ spades: "\u2660" },
-           { hearts: "\u2665" },
-           { diamonds: "\u2666" },
-           { clubs: "\u2663" }]
 
   attr_reader :human, :dealer, :deck, :round_winner, :busted_player
 
@@ -117,7 +153,7 @@ class TwentyOne
       setup_round
       human_turn
       dealer_turn if !human.busted?
-      display_round_results
+      wrap_up_round
 
       break if game_over?
       player_ready_prompt
@@ -148,22 +184,22 @@ class TwentyOne
       input = hit_or_stay
 
       case input
-      when 'h' then
+      when 'h', 'hit' then
         deal_to(human)
         display_table
         break if human.busted?
-      when 's' then break
+      when 's', 'stay' then break
       end
     end
   end
 
   def dealer_turn
-    until dealer.busted? || dealer.score >= DEALER_CUTOFF
+    until dealer.busted? || dealer.score >= Dealer::DEALER_CUTOFF
       deal_to(dealer)
     end
   end
 
-  def display_round_results
+  def wrap_up_round
     update_round_winner
     update_round_scores
     display_table(show_all_cards: true)
@@ -233,16 +269,8 @@ class TwentyOne
   end
 
   def create_players
-    name = nil
-    loop do
-      puts "Please enter a name"
-      name = gets.chomp
-      break if !name.empty?
-      puts "Please enter at least one character"
-    end
-
-    @human = Player.new(name)
-    @dealer = Player.new("Dealer")
+    @human = Human.new
+    @dealer = Dealer.new
   end
 
   def clear_screen
@@ -259,24 +287,19 @@ class TwentyOne
     input = nil
     loop do
       input = gets.chomp.downcase
-      break if %w(h s).include?(input)
-      puts "Sorry, please enter 'h' or 's'"
+      break if %w(hit stay h s).include?(input)
+      puts "Sorry, please enter 'h','hit', 'stay' or 's'"
     end
     input
-  end
-
-  def show_dealer_title(show_score: false)
-    score_display = show_score ? dealer.score : "???"
-    puts "Dealer's hand // Dealer's Score: #{score_display}"
   end
 
   def display_table(show_all_cards: false)
     clear_screen
     show_round_scores
-    show_dealer_title(show_score: show_all_cards)
+    dealer.show_title(show_score: show_all_cards)
     dealer.display_hand(face_up: show_all_cards)
 
-    puts "Your hand. // Your Score #{human.score}"
+    human.show_title
     human.display_hand
   end
 
