@@ -1,4 +1,3 @@
-require 'pry'
 class Board
   WINNING_LINES = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] + # rows
                   [[1, 4, 7], [2, 5, 8], [3, 6, 9]] + # cols
@@ -117,7 +116,7 @@ class TTTGame
     reset_score
   end
 
-  def play #Starts the game
+  def play # Starts the game
     clear
     main_game
     display_goodbye_message
@@ -164,7 +163,7 @@ class TTTGame
     computer.name = (["Rick", "Martha", "Jane"].sample)
   end
 
-  def main_game #Main game loop
+  def main_game # Main game loop
     loop do
       play_round
       if game_over?
