@@ -1,30 +1,28 @@
 class Minilang
 
-  POP_METHODS = ['add', 'sub', 'mult', 'div', 'mod', 'pop']
+  METHODS = ['add', 'sub', 'mult', 'div', 'mod', 'pop', 'push', 'print']
 
   def initialize(program)
-    @token_list = tokenizer(program)
     @reg = 0
     @stack = []
+    @program = program
   end
 
   def eval
-    @token_list.each do |token|
-      begin
-        if digit?(token)
-          self.reg = token.to_i
-        elsif POP_METHODS.include?(token.downcase) && stack.empty?
-          raise EmptyStack
-        else
-          self.send(token.downcase)
-        end
-      rescue EmptyStack => e
-        puts e.message
-        break
-      rescue NoMethodError
-        puts "Invalid Token: #{token}"
-        break
-      end
+    begin
+      tokenizer.each { |token| execute(token) }
+    rescue MinilangError => e
+      puts e.message
+    end
+  end
+
+  def execute(token)
+    if digit?(token)
+      self.reg = token.to_i
+    elsif METHODS.none?(token.downcase)
+      raise InvalidTokenError, "Invalid Token: #{token}"
+    else
+      self.send(token.downcase)
     end
   end
 
@@ -36,8 +34,13 @@ class Minilang
     arg =~ /^[-+]?\d+$/
   end
     
-  def tokenizer(program)
-    program.split(' ')
+  def tokenizer
+    @program.split(' ')
+  end
+
+  def pop
+    raise EmptyStackError, "Empty Stack!" if stack.empty?
+    self.reg = stack.pop
   end
 
   def print
@@ -49,36 +52,29 @@ class Minilang
   end
 
   def add
-    self.reg = reg + stack.pop
+    self.reg = reg + pop
   end
 
   def sub
-    self.reg = reg - stack.pop
+    self.reg = reg - pop
   end
 
   def mult
-    self.reg = reg * stack.pop
+    self.reg = reg * pop
   end
 
   def div
-    self.reg = reg / stack.pop
+    self.reg = reg / pop
   end
 
   def mod
-    self.reg = reg % stack.pop
-  end
-
-  def pop
-    self.reg = stack.pop
-  end
-
-end
-
-class EmptyStack < StandardError
-  def message
-    "Empty Stack!"
+    self.reg = reg % pop
   end
 end
+
+class MinilangError < StandardError; end
+class EmptyStackError < MinilangError; end
+class InvalidTokenError < MinilangError; end
 
 
 Minilang.new('PRINT').eval
